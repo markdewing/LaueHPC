@@ -1,0 +1,22 @@
+#
+# Definition of MACROS
+
+LAPACK=/Users/cjknight/Documents/soft/lib/lapack/
+
+CXX = mpicxx
+CXXFLAGS = -g -fopenmp -O3 -std=c++0x
+CXXFLAGS += -I$(LAPACK)/include
+
+CUDA_CXX = 
+CUDA_CXXFLAGS = 
+
+CPP = cpp -P -traditional
+CPPFLAGS =
+
+LD = $(CXX)
+LIB = -L$(LAPACK)/lib -llapacke -lcblas -llapack -lrefblas 
+LIB += -L/opt/local/lib/gcc11/ -lgfortran -Wl,-rpath /opt/local/lib/gcc11
+
+# -- subset of src files with cuda kernels
+CUDA_SRC = 
+CUDA_OBJ = $(CUDA_SRC:.cpp=.o)

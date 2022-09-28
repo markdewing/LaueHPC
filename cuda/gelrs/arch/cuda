@@ -1,0 +1,14 @@
+CUDA = /usr/local/cuda
+
+CXX = mpicxx
+CXXFLAGS = -g -fopenmp -O3 -std=c++0x -I$(CUDA)/include
+CXXFLAGS += -D_USE_GPU
+
+CUDA_CXX = nvcc
+CUDA_CXXFLAGS = 
+
+CPP = cpp -P -traditional
+CPPFLAGS =
+
+LD = $(CXX)
+LIB = -L$(CUDA)/lib64 -lcuda -lcudart -lcusolver -lcublas -lcusparse

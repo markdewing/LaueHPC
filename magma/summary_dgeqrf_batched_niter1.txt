@@ -1,0 +1,22 @@
+Executing COMMAND= /home/knight/soft/thetagpu/magma/magma-2.6.2/build/testing/testing_dgeqrf_batched -n 798,256 --batch 1 --niter 1
+% MAGMA 2.6.2  32-bit magma_int_t, 64-bit pointer.
+% Compiled with CUDA support for 8.0
+% CUDA runtime 11040, driver 11040. OpenMP threads 32. 
+% device 0: NVIDIA A100-SXM4-40GB, 1410.0 MHz clock, 40536.2 MiB memory, capability 8.0
+% Wed Sep 21 11:07:15 2022
+% Usage: /home/knight/soft/thetagpu/magma/magma-2.6.2/build/testing/testing_dgeqrf_batched [options] [-h|--help]
+
+% BatchCount   M     N   MAGMA Gflop/s (ms)   cuBLAS Gflop/s (ms)    CPU Gflop/s (ms)   |R - Q^H*A|_mag   |I - Q^H*Q|_mag   |R - Q^H*A|_cub   |I - Q^H*Q|_cub
+%============================================================================================================================================================
+         1   798   256       3.63 (  25.85)        0.78 ( 120.77)     ---  (  ---  )
+         2   798   256       4.25 (  44.14)        1.14 ( 165.44)     ---  (  ---  )
+         4   798   256      13.35 (  28.13)        2.21 ( 170.05)     ---  (  ---  )
+         8   798   256      28.56 (  26.30)        3.19 ( 235.20)     ---  (  ---  )
+        16   798   256      50.88 (  29.52)        6.33 ( 237.22)     ---  (  ---  )
+        32   798   256     106.99 (  28.08)        8.03 ( 373.91)     ---  (  ---  )
+        64   798   256     193.42 (  31.07)       14.14 ( 425.02)     ---  (  ---  )
+       128   798   256     368.86 (  32.58)       25.98 ( 462.62)     ---  (  ---  )
+       512   798   256     931.94 (  51.58)       87.56 ( 548.99)     ---  (  ---  )
+      1024   798   256    1252.76 (  76.74)      111.75 ( 860.32)     ---  (  ---  )
+      2048   798   256    1505.75 ( 127.70)      162.60 (1182.53)     ---  (  ---  )
+      4096   798   256    1574.21 ( 244.29)      113.97 (3374.29)     ---  (  ---  )

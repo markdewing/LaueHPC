@@ -1,0 +1,31 @@
+PATH_TO_NVCC = $(shell which nvcc)
+PATH_TO_NVHPC = $(shell echo ${PATH_TO_NVCC} | rev | cut -d '/' -f 4- | rev)
+
+$(info PATH_TO_NVHPC= [${PATH_TO_NVHPC}])
+
+LAPACKE=/home/knight/soft/thetagpu/lapack
+
+CXX = mpicxx
+CXXFLAGS = -g -fopenmp -O3 -std=c++0x -D_USE_GPU
+#CXXFLAGS += -D_CHECK_CPU -I$(LAPACKE)/include
+
+CUDA_CXX = nvcc
+CUDA_CXXFLAGS = -D_USE_GPU -arch=sm_80
+
+CPP = cpp -P -traditional
+CPPFLAGS =
+
+LD = $(CXX)
+LIB = -L$(PATH_TO_NVHPC)/cuda/lib64 -lcuda -lcudart
+LIB += -L$(PATH_TO_NVHPC)/math_libs/lib64 -lcusolver -lcublas -lcusparse
+#LIB += -L$(LAPACKE)/lib -llapacke
+LIB += -L$(PATH_TO_NVHPC)/compilers/lib -llapack -lblas
+#LIB += -lgfortran
+
+BINROOT=./
+EX=a.out
+SHELL=/bin/sh
+
+# -- subset of src files with cuda kernels
+CUDA_SRC = pm_cuda.cpp offload.cpp
+CUDA_OBJ = $(CUDA_SRC:.cpp=.o)
