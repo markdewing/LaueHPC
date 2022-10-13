@@ -47,3 +47,17 @@ $ cmake -DMAGMA_ENABLE_CUDA=ON \
 $ make -j 16
 $ make install
 ```
+
+## E4S Module on Polaris
+There is a magma module provided as part of the `e4s/22.05/PrgEnv-gnu` module that provides the necessary libraries and headers for building applications.
+```
+$ ssh knight@polaris.alcf.anl.gov
+$ module load e4s/22.05/PrgEng-gnu
+$ module load magma
+```
+Note, loading this E4S module will switch the programming environment to `PrgEnv-gnu` and load a `cudatoolkit-standalone` module. 
+
+## Running the test examples
+A small set of test examples were created based on the tests provided in the `magma-2.6.2/testing` directory. There are thus several dependencies generated as part of the magma build that are required to run these particular test examples.
+
+
