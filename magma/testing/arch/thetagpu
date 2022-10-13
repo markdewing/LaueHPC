@@ -1,0 +1,26 @@
+CUDA=/usr/local/cuda
+
+MAGMA=/home/knight/soft/thetagpu/magma/magma-2.6.2
+
+LAPACK=-L/home/knight/soft/thetagpu/lapack/lib -llapack -lrefblas -lgfortran
+
+CXX=/usr/bin/c++
+CXXFLAGS_COMMON = -std=c++11 -fopenmp -Wall -Wno-unused-function 
+CXXFLAGS = $(CXXFLAGS_COMMON) \
+           -I${CUDA}/include \
+           -I${MAGMA}/build/include \
+           -I${MAGMA}/include \
+           -I${MAGMA}/control \
+           -I${MAGMA}/magmablas \
+           -I${MAGMA}/sparse/include \
+           -I${MAGMA}/sparse/control \
+           -I${MAGMA}/testing 
+
+LDFLAGS = $(CXXFLAGS_COMMON) -rdynamic
+LIB = -L${MAGMA}/build/lib -Wl,-rpath,${MAGMA}/build/lib:${CUDA}/lib64 \
+      -ltester -llapacktest -lmagma \
+      ${CUDA}/lib64/libcudart_static.a -lpthread -ldl -lrt \
+      ${CUDA}/lib64/libcudadevrt.a ${CUDA}/lib64/libcudart.so \
+      ${CUDA}/lib64/libcublas.so ${CUDA}/lib64/libcusparse.so \
+      ${LAPACK}
+

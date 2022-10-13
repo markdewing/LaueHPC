@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Batched QR Factorization
-EXE=~/soft/thetagpu/magma/magma-2.6.2/build/testing/testing_dgeqrf_batched
+EXE=./testing/testing_dgeqrf_batched
 
 NUM_ROWS=798
 NUM_COLS=256
