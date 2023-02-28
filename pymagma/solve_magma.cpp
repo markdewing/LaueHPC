@@ -31,7 +31,8 @@ void solve_cpu(int nrow, int ncol, double* A_ptr, double* b_ptr, double* result_
 
     double work_query;
     int lwork = -1;
-    magma_dgeqrf(nrow, ncol, A_ptr, nrow, tau, &work_query, lwork, &info);
+    //magma_dgeqrf(nrow, ncol, A_ptr, nrow, tau, &work_query, lwork, &info);
+    dgeqrf_(&nrow, &ncol, A_ptr, &nrow, tau, &work_query, &lwork, &info);
     if (info != 0)
         printf("dgeqrf work query, info  = %d\n",info);
     lwork = int(work_query);
@@ -39,7 +40,8 @@ void solve_cpu(int nrow, int ncol, double* A_ptr, double* b_ptr, double* result_
 
     double* work = new double[lwork];
 
-    magma_dgeqrf(nrow, ncol, A_ptr, nrow, tau, work, lwork, &info);
+    //magma_dgeqrf(nrow, ncol, A_ptr, nrow, tau, work, lwork, &info);
+    dgeqrf_(&nrow, &ncol, A_ptr, &nrow, tau, work, &lwork, &info);
     if (info != 0)
         printf("dgeqrf info = %d\n",info);
     printf("done with dgeqrf\n");
@@ -59,7 +61,11 @@ void solve_cpu(int nrow, int ncol, double* A_ptr, double* b_ptr, double* result_
     }
 #endif
 
-    magma_dormqr(MagmaLeft, MagmaTrans, nrow, 1, ncol, A_ptr, nrow, tau, b_ptr, nrow, work, lwork, &info);
+    //magma_dormqr(MagmaLeft, MagmaTrans, nrow, 1, ncol, A_ptr, nrow, tau, b_ptr, nrow, work, lwork, &info);
+    char side('L');
+    char trans('T');
+    int nrhs(1);
+    dormqr_(&side, &trans, &nrow, &nrhs, &ncol, A_ptr, &nrow, tau, b_ptr, &nrow, work, &lwork, &info);
     if (info != 0)
         printf("dormqr info = %d\n",info);
     printf("done with dormqr\n");
@@ -73,7 +79,6 @@ void solve_cpu(int nrow, int ncol, double* A_ptr, double* b_ptr, double* result_
     char upper('U');
     char notrans('N');
     char nonunit('N');
-    int nrhs(1);
     double one(1.0);
     dtrsm_(&left, &upper, &notrans, &nonunit, &ncol, &nrhs, &one, A_ptr, &nrow, b_ptr, &nrow);
 
