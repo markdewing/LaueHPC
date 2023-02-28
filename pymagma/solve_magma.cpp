@@ -60,13 +60,15 @@ void solve_gpu(int nrow, int ncol, double* A_ptr, double* b_ptr, double* result_
     magma_int_t lwork = -1;
     double hwork_query[1];
 
-    // The call the dgeqrf_gpu structures the output differently from lapack.
+    // The call to dgeqrf_gpu structures the output differently from lapack.
     // Q is present in dA, but R is not. dT contains intermediate data to
     // make multiplying by Q faster, and to recreate R.
     // Calling dormqr works, but calling dtrsm will not.
     // There is a routine magma_dgeqrs_gpu that performs the solve.
     // The first operation is performs is calling magma_dormqr_gpu.  However,
     // that call segfaults, but if I call magma_dormqr_gpu myself, it does not.
+    // The segfault is using an AMD GPU with rocm 5.1
+    // With CUDA, it runs, but the answer is not correct.
 #if 0
 
    // work size query
