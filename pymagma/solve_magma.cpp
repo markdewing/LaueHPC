@@ -4,6 +4,7 @@
 #include "magma_lapack.h"
 #include "magma_dlapack.h"
 #include <stdio.h>
+#include <stdexcept>
 
 void init_magma()
 {
@@ -140,15 +141,15 @@ void solve_gpu(int nrow, int ncol, double* A_ptr, double* b_ptr, double* result_
     delete[] tau;
 }
 
-void solve_cpu(int nrow, int ncol, double* A_ptr, double* b_ptr, double* result_ptr)
+// Solve on GPU using simplest Magma interfaces
+void solve_gpu_simple(int nrow, int ncol, double* A_ptr, double* b_ptr, double* result_ptr)
 {
     double* tau = new double[ncol];
     int info;
 
     double work_query;
     int lwork = -1;
-    //magma_dgeqrf(nrow, ncol, A_ptr, nrow, tau, &work_query, lwork, &info);
-    dgeqrf_(&nrow, &ncol, A_ptr, &nrow, tau, &work_query, &lwork, &info);
+    magma_dgeqrf(nrow, ncol, A_ptr, nrow, tau, &work_query, lwork, &info);
     if (info != 0)
         printf("dgeqrf work query, info  = %d\n",info);
     lwork = int(work_query);
@@ -156,16 +157,11 @@ void solve_cpu(int nrow, int ncol, double* A_ptr, double* b_ptr, double* result_
 
     double* work = new double[lwork];
 
-    //magma_dgeqrf(nrow, ncol, A_ptr, nrow, tau, work, lwork, &info);
-    dgeqrf_(&nrow, &ncol, A_ptr, &nrow, tau, work, &lwork, &info);
+    magma_dgeqrf(nrow, ncol, A_ptr, nrow, tau, work, lwork, &info);
     if (info != 0)
         printf("dgeqrf info = %d\n",info);
-    printf("done with dgeqrf\n");
-    //for (int i = 0; i < 4; i++) {
-    //    printf(" tau: %d %g\n",i,tau[i]);
-    //}
+    //printf("done with dgeqrf\n");
 
-#if 0
     int lwork1 = -1;
     magma_dormqr(MagmaLeft, MagmaTrans, ncol, 1, ncol, A_ptr, nrow, tau, b_ptr, nrow, &work_query, lwork1, &info);
     lwork1 = int(work_query);
@@ -175,9 +171,55 @@ void solve_cpu(int nrow, int ncol, double* A_ptr, double* b_ptr, double* result_
         double* work = new double[lwork1];
         lwork = lwork1;
     }
+
+    magma_dormqr(MagmaLeft, MagmaTrans, nrow, 1, ncol, A_ptr, nrow, tau, b_ptr, nrow, work, lwork, &info);
+
+    // dtrsm on GPU
+#if 0
+    // Need to set up data transfer to/from GPU
+    magma_dtrsm(MagmaLeft, MagmaUpper, MagmaNoTrans, MagmaNonUnit, ncol, 1, 1.0, A_ptr, nrow, result_ptr, nrow, queue);
 #endif
 
-    //magma_dormqr(MagmaLeft, MagmaTrans, nrow, 1, ncol, A_ptr, nrow, tau, b_ptr, nrow, work, lwork, &info);
+    // dtrsm on CPU
+#if 1
+    char left('L');
+    char upper('U');
+    char notrans('N');
+    char nonunit('N');
+    double one(1.0);
+    int nrhs(1);
+    dtrsm_(&left, &upper, &notrans, &nonunit, &ncol, &nrhs, &one, A_ptr, &nrow, b_ptr, &nrow);
+#endif
+
+    for (int i = 0; i < ncol; i++)
+        result_ptr[i] = b_ptr[i];
+
+    delete[] tau;
+    delete[] work;
+}
+
+void solve_cpu(int nrow, int ncol, double* A_ptr, double* b_ptr, double* result_ptr)
+{
+    double* tau = new double[ncol];
+    int info;
+
+    double work_query;
+    int lwork = -1;
+    dgeqrf_(&nrow, &ncol, A_ptr, &nrow, tau, &work_query, &lwork, &info);
+    if (info != 0)
+        printf("dgeqrf work query, info  = %d\n",info);
+    lwork = int(work_query);
+    printf("optimal lwork = %d\n",lwork);
+
+    double* work = new double[lwork];
+
+    dgeqrf_(&nrow, &ncol, A_ptr, &nrow, tau, work, &lwork, &info);
+    if (info != 0)
+        printf("dgeqrf info = %d\n",info);
+    //for (int i = 0; i < 4; i++) {
+    //    printf(" tau: %d %g\n",i,tau[i]);
+    //}
+
     char side('L');
     char trans('T');
     int nrhs(1);
@@ -190,7 +232,6 @@ void solve_cpu(int nrow, int ncol, double* A_ptr, double* b_ptr, double* result_
     //}
 
 
-    //magma_dtrsm(MagmaLeft, MagmaUpper, MagmaNoTrans, MagmaNonUnit, ncol, 1, 1.0, A_ptr, nrow, result_ptr, nrow, queue);
     char left('L');
     char upper('U');
     char notrans('N');

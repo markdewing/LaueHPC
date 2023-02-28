@@ -27,6 +27,8 @@ py::array_t<double> solve(py::array_t<double> A, py::array_t<double> b, const st
         solve_cpu(nrow, ncol, A_ptr, b_ptr, result_ptr);
     else if (place == "gpu")
         solve_gpu(nrow, ncol, A_ptr, b_ptr, result_ptr);
+    else if (place == "gpu_simple")
+        solve_gpu_simple(nrow, ncol, A_ptr, b_ptr, result_ptr);
     else
         throw std::invalid_argument(std::string("unknown execution place: ") + place);
 

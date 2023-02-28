@@ -11,4 +11,7 @@ void solve_cpu(int nrow, int ncol, double* A_ptr, double* b_ptr, double* result_
 // solve single system on gpu
 void solve_gpu(int nrow, int ncol, double* A_ptr, double* b_ptr, double* result_ptr);
 
+// Solve using simplest Magma interfaces
+void solve_gpu_simple(int nrow, int ncol, double* A_ptr, double* b_ptr, double* result_ptr);
+
 #endif
