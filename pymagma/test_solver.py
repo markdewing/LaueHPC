@@ -21,7 +21,9 @@ b = np.loadtxt(b_txt)
 print('b',b.shape)
 b_copy = np.copy(b)
 
-x = solver.solve(A, b, place="cpu")
+# Default method is qr
+#x = solver.solve(A, b, place="gpu_simple")
+x = solver.solve(A, b, place="cpu", method="svd")
 
 print('x shape = ',x.shape)
 #print('x = ',x[0:4])
