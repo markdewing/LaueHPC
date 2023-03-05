@@ -3,13 +3,14 @@
 
 #include "solve_cpu.h"
 #include "solve_magma.h"
+#include "perf_info.h"
 #include <string>
 
 namespace py = pybind11;
 
 // Solves Ax=b
 // Input A,b, return x
-py::array_t<double> solve(py::array_t<double> A, py::array_t<double> b, const std::string& place, const std::string& method) {
+py::array_t<double> solve(py::array_t<double> A, py::array_t<double> b, const std::string& place, const std::string& method, PerfInfo &perf) {
 
     // Get a pointer to the data in the input array
     auto A_ptr = static_cast<double *>(A.request().ptr);
@@ -27,11 +28,11 @@ py::array_t<double> solve(py::array_t<double> A, py::array_t<double> b, const st
     if (method == "qr")
     {
         if (place == "cpu")
-            solve_cpu_QR(nrow, ncol, A_ptr, b_ptr, result_ptr);
+            solve_cpu_QR(nrow, ncol, A_ptr, b_ptr, result_ptr, perf);
         else if (place == "gpu")
-            solve_gpu(nrow, ncol, A_ptr, b_ptr, result_ptr);
+            solve_gpu(nrow, ncol, A_ptr, b_ptr, result_ptr, perf);
         else if (place == "gpu_simple")
-            solve_gpu_simple(nrow, ncol, A_ptr, b_ptr, result_ptr);
+            solve_gpu_simple(nrow, ncol, A_ptr, b_ptr, result_ptr, perf);
         else
             throw std::invalid_argument(std::string("unknown execution place: ") + place + std::string(" for solution method: ") + method);
     }
@@ -39,7 +40,7 @@ py::array_t<double> solve(py::array_t<double> A, py::array_t<double> b, const st
     if (method == "svd")
     {
         if (place == "cpu")
-            solve_cpu_SVD(nrow, ncol, A_ptr, b_ptr, result_ptr);
+            solve_cpu_SVD(nrow, ncol, A_ptr, b_ptr, result_ptr, perf);
         else
             throw std::invalid_argument(std::string("unknown execution place: ") + place + std::string(" for solution method: ") + method);
     }
@@ -60,8 +61,12 @@ void fini()
 // Define the module
 PYBIND11_MODULE(solver, m) {
     m.doc() = "Python interface to magma solver"; // Add a docstring to the module
+    py::class_<PerfInfo>(m, "PerfInfo")
+        .def(py::init<>())
+        .def_readwrite("elapsed", &PerfInfo::elapsed);
     m.def("solve", &solve, "Solve Ax=b for x",py::arg("A"),py::arg("b"),
-                 py::arg("place")="cpu", py::arg("method")="qr");
+                 py::arg("place")="cpu", py::arg("method")="qr", py::arg("perf") = PerfInfo()
+                     );
     m.def("init", &init, "Initialize magma");
     m.def("fini", &fini, "Shut down magma");
 }

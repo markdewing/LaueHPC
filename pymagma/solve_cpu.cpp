@@ -1,13 +1,16 @@
 
 #include "solve_cpu.h"
+#include "perf_info.h"
 #include "magma_v2.h"
 #include "magma_lapack.h"
 #include "magma_dlapack.h"
 #include <stdio.h>
 #include <stdexcept>
+#include <chrono>
 
-void solve_cpu_QR(int nrow, int ncol, double* A_ptr, double* b_ptr, double* result_ptr)
+void solve_cpu_QR(int nrow, int ncol, double* A_ptr, double* b_ptr, double* result_ptr, PerfInfo& perf)
 {
+    RecordElapsed recordElapsed(perf);
     double* tau = new double[ncol];
     int info;
 
@@ -54,8 +57,9 @@ void solve_cpu_QR(int nrow, int ncol, double* A_ptr, double* b_ptr, double* resu
     delete[] work;
 }
 
-void solve_cpu_SVD(int nrow, int ncol, double* A_ptr, double* b_ptr, double* result_ptr)
+void solve_cpu_SVD(int nrow, int ncol, double* A_ptr, double* b_ptr, double* result_ptr, PerfInfo& perf)
 {
+    RecordElapsed recordElapsed(perf);
     char jobu('A');
     char jobvt('A');
 
@@ -108,5 +112,4 @@ void solve_cpu_SVD(int nrow, int ncol, double* A_ptr, double* b_ptr, double* res
     delete[] S_ptr;
     delete[] VT_ptr;
     delete[] U_ptr;
- 
 }

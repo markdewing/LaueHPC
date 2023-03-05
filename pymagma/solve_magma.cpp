@@ -1,5 +1,6 @@
 
 #include "solve_magma.h"
+#include "perf_info.h"
 #include "magma_v2.h"
 #include "magma_lapack.h"
 #include "magma_dlapack.h"
@@ -17,8 +18,10 @@ void fini_magma()
     magma_finalize();
 }
 
-void solve_gpu(int nrow, int ncol, double* A_ptr, double* b_ptr, double* result_ptr)
+void solve_gpu(int nrow, int ncol, double* A_ptr, double* b_ptr, double* result_ptr, PerfInfo& perf)
 {
+    RecordElapsed recordElapsed(perf);
+
     magma_device_t device = 0;
     magma_setdevice(device);
     magma_queue_t queue;
@@ -144,8 +147,9 @@ void solve_gpu(int nrow, int ncol, double* A_ptr, double* b_ptr, double* result_
 }
 
 // Solve on GPU using simplest Magma interfaces
-void solve_gpu_simple(int nrow, int ncol, double* A_ptr, double* b_ptr, double* result_ptr)
+void solve_gpu_simple(int nrow, int ncol, double* A_ptr, double* b_ptr, double* result_ptr, PerfInfo& perf)
 {
+    RecordElapsed recordElapsed(perf);
     double* tau = new double[ncol];
     int info;
 

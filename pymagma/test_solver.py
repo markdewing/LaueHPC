@@ -21,10 +21,13 @@ b = np.loadtxt(b_txt)
 print('b',b.shape)
 b_copy = np.copy(b)
 
-# Default method is qr
-#x = solver.solve(A, b, place="gpu_simple")
-x = solver.solve(A, b, place="cpu", method="svd")
 
+perf = solver.PerfInfo()
+# Default method is qr
+#x = solver.solve(A, b, place="gpu_simple", perf=perf)
+x = solver.solve(A, b, place="cpu", method="svd", perf=perf)
+
+print("elapsed time (s) = ",perf.elapsed)
 print('x shape = ',x.shape)
 #print('x = ',x[0:4])
 
