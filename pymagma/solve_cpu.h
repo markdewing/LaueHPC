@@ -9,4 +9,7 @@ void solve_cpu_QR(int nrow, int ncol, double* A_ptr, double* b_ptr, double* resu
 
 void solve_cpu_SVD(int nrow, int ncol, double* A_ptr, double* b_ptr, double* result_ptr, PerfInfo& perf);
 
+void solve_batch_cpu_QR(int nrow, int ncol, int nbatch, double* A_ptr, double* b_ptr, double* result_ptr, PerfInfo& perf);
+
+void solve_batch_cpu_SVD(int nrow, int ncol, int nbatch, double* A_ptr, double* b_ptr, double* result_ptr, PerfInfo& perf);
 #endif
