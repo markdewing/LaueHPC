@@ -18,7 +18,7 @@ void fini_magma()
     magma_finalize();
 }
 
-void solve_gpu(int nrow, int ncol, double* A_ptr, double* b_ptr, double* result_ptr, PerfInfo& perf)
+void solve_gpu_QR(int nrow, int ncol, double* A_ptr, double* b_ptr, double* result_ptr, PerfInfo& perf)
 {
     RecordElapsed recordElapsed(perf);
 
@@ -147,7 +147,7 @@ void solve_gpu(int nrow, int ncol, double* A_ptr, double* b_ptr, double* result_
 }
 
 // Solve on GPU using simplest Magma interfaces
-void solve_gpu_simple(int nrow, int ncol, double* A_ptr, double* b_ptr, double* result_ptr, PerfInfo& perf)
+void solve_gpu_simple_QR(int nrow, int ncol, double* A_ptr, double* b_ptr, double* result_ptr, PerfInfo& perf)
 {
     RecordElapsed recordElapsed(perf);
     double* tau = new double[ncol];
@@ -202,5 +202,60 @@ void solve_gpu_simple(int nrow, int ncol, double* A_ptr, double* b_ptr, double* 
 
     delete[] tau;
     delete[] work;
+}
+
+void solve_gpu_simple_SVD(int nrow, int ncol, double* A_ptr, double* b_ptr, double* result_ptr, PerfInfo& perf)
+{
+    RecordElapsed recordElapsed(perf);
+
+    int min_mn = nrow < ncol ? nrow : ncol;
+
+    double* U_ptr =  new double[nrow * nrow];
+    double* VT_ptr = new double[ncol * ncol];
+    double* S_ptr = new double[min_mn];
+
+    int info;
+
+    double work_query;
+    int lwork = -1;
+
+    // Work query
+    magma_dgesvd(MagmaAllVec, MagmaAllVec, nrow, ncol, A_ptr, nrow, S_ptr, U_ptr, nrow, VT_ptr, ncol, &work_query, lwork, &info);
+    if (info != 0)
+        throw std::runtime_error(std::string("dgesvd work query info = ") + std::to_string(info));
+
+    lwork = int(work_query);
+    printf("lwork = %d\n",lwork);
+
+    double* work = new double[lwork];
+    magma_dgesvd(MagmaAllVec, MagmaAllVec, nrow, ncol, A_ptr, nrow, S_ptr, U_ptr, nrow, VT_ptr, ncol, work, lwork, &info);
+    if (info != 0)
+        throw std::runtime_error(std::string("dgesvd info = ") + std::to_string(info));
+
+   for (int i = 0; i < ncol; i++)
+        S_ptr[i] = 1.0/S_ptr[i];
+
+    // perform dgemv's on the CPU, for now
+
+    double* tmp_ptr =  new double[nrow];
+    // u.T * b
+    char trans('T');
+    double one(1.0);
+    double zero(0.0);
+    int incx(1);
+    dgemv_(&trans, &nrow, &nrow, &one, U_ptr, &nrow, b_ptr, &incx, &zero, tmp_ptr, &incx);
+
+    // S^-1 * (u.T * b)
+    for (int i = 0; i < ncol; i++)
+        tmp_ptr[i] *= S_ptr[i];
+
+    // vt.T * (S^-1 * (u.T * b))
+    dgemv_(&trans, &ncol, &ncol, &one, VT_ptr, &ncol, tmp_ptr, &incx, &zero, result_ptr, &incx);
+
+    delete[] tmp_ptr;
+    delete[] work;
+    delete[] S_ptr;
+    delete[] VT_ptr;
+    delete[] U_ptr;
 }
 

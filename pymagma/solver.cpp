@@ -30,9 +30,9 @@ py::array_t<double> solve(py::array_t<double> A, py::array_t<double> b, const st
         if (place == "cpu")
             solve_cpu_QR(nrow, ncol, A_ptr, b_ptr, result_ptr, perf);
         else if (place == "gpu")
-            solve_gpu(nrow, ncol, A_ptr, b_ptr, result_ptr, perf);
+            solve_gpu_QR(nrow, ncol, A_ptr, b_ptr, result_ptr, perf);
         else if (place == "gpu_simple")
-            solve_gpu_simple(nrow, ncol, A_ptr, b_ptr, result_ptr, perf);
+            solve_gpu_simple_QR(nrow, ncol, A_ptr, b_ptr, result_ptr, perf);
         else
             throw std::invalid_argument(std::string("unknown execution place: ") + place + std::string(" for solution method: ") + method);
     }
@@ -41,6 +41,8 @@ py::array_t<double> solve(py::array_t<double> A, py::array_t<double> b, const st
     {
         if (place == "cpu")
             solve_cpu_SVD(nrow, ncol, A_ptr, b_ptr, result_ptr, perf);
+        else if (place == "gpu_simple")
+            solve_gpu_simple_SVD(nrow, ncol, A_ptr, b_ptr, result_ptr, perf);
         else
             throw std::invalid_argument(std::string("unknown execution place: ") + place + std::string(" for solution method: ") + method);
     }
