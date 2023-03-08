@@ -227,16 +227,23 @@ void solve_gpu_simple_SVD(int nrow, int ncol, double* A_ptr, double* b_ptr, doub
     lwork = int(work_query);
     printf("lwork = %d\n",lwork);
 
+    RecordComp record_dgesvd(perf, 0);
+
     double* work = new double[lwork];
+
     magma_dgesvd(MagmaAllVec, MagmaAllVec, nrow, ncol, A_ptr, nrow, S_ptr, U_ptr, nrow, VT_ptr, ncol, work, lwork, &info);
     if (info != 0)
         throw std::runtime_error(std::string("dgesvd info = ") + std::to_string(info));
 
+    record_dgesvd.stop();
+
    for (int i = 0; i < ncol; i++)
         S_ptr[i] = 1.0/S_ptr[i];
 
-    // perform dgemv's on the CPU, for now
 
+    RecordComp record_dgemv(perf, 1);
+
+    // perform dgemv's on the CPU, for now
     double* tmp_ptr =  new double[nrow];
     // u.T * b
     char trans('T');
@@ -251,6 +258,7 @@ void solve_gpu_simple_SVD(int nrow, int ncol, double* A_ptr, double* b_ptr, doub
 
     // vt.T * (S^-1 * (u.T * b))
     dgemv_(&trans, &ncol, &ncol, &one, VT_ptr, &ncol, tmp_ptr, &incx, &zero, result_ptr, &incx);
+    record_dgemv.stop();
 
     delete[] tmp_ptr;
     delete[] work;

@@ -80,6 +80,7 @@ void solve_cpu_SVD(int nrow, int ncol, double* A_ptr, double* b_ptr, double* res
     if (info != 0)
         throw std::runtime_error(std::string("Non zero info from degsvd work query: ")+ std::to_string(info));
 
+    RecordComp record_dgesvd(perf, 0);
     lwork = work_query[0];
     printf("lwork for dgesvd = %d\n",lwork);
     double *work = new double[lwork];
@@ -89,9 +90,12 @@ void solve_cpu_SVD(int nrow, int ncol, double* A_ptr, double* b_ptr, double* res
     if (info != 0)
         throw std::runtime_error(std::string("Non zero info from degsvd: ")+ std::to_string(info));
 
+    record_dgesvd.stop();
+
     for (int i = 0; i < ncol; i++)
         S_ptr[i] = 1.0/S_ptr[i];
 
+    RecordComp record_dgemv(perf, 1);
     double* tmp_ptr =  new double[nrow];
     // u.T * b
     char trans('T');
@@ -106,6 +110,7 @@ void solve_cpu_SVD(int nrow, int ncol, double* A_ptr, double* b_ptr, double* res
 
     // vt.T * (S^-1 * (u.T * b))
     dgemv_(&trans, &ncol, &ncol, &one, VT_ptr, &ncol, tmp_ptr, &incx, &zero, result_ptr, &incx);
+    record_dgemv.stop();
 
     delete[] tmp_ptr;
     delete[] work;

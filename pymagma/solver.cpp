@@ -103,7 +103,8 @@ PYBIND11_MODULE(solver, m) {
     m.doc() = "Python interface to magma solver"; // Add a docstring to the module
     py::class_<PerfInfo>(m, "PerfInfo")
         .def(py::init<>())
-        .def_readwrite("elapsed", &PerfInfo::elapsed);
+        .def_readwrite("elapsed", &PerfInfo::elapsed)
+        .def("get_comp", &PerfInfo::get_comp);
     m.def("solve", &solve, "Solve Ax=b for x",py::arg("A"),py::arg("b"),
                  py::arg("place")="cpu", py::arg("method")="qr", py::arg("perf") = PerfInfo()
                      );
