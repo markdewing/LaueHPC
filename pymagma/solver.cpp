@@ -2,8 +2,10 @@
 #include <pybind11/numpy.h>
 
 #include "solve_cpu.h"
+#ifdef USE_MAGMA
 #include "solve_magma.h"
-#if USE_CUDA
+#endif
+#ifdef  USE_CUDA
 #include "solve_cuda.h"
 #endif
 #include "perf_info.h"
@@ -32,10 +34,12 @@ py::array_t<double> solve(py::array_t<double> A, py::array_t<double> b, const st
     {
         if (place == "cpu")
             solve_cpu_QR(nrow, ncol, A_ptr, b_ptr, result_ptr, perf);
+#ifdef USE_MAGMA
         else if (place == "gpu")
             solve_gpu_QR(nrow, ncol, A_ptr, b_ptr, result_ptr, perf);
         else if (place == "gpu_simple")
             solve_gpu_simple_QR(nrow, ncol, A_ptr, b_ptr, result_ptr, perf);
+#endif
 #ifdef USE_CUDA
         else if (place == "cuda")
             solve_cuda_QR(nrow, ncol, A_ptr, b_ptr, result_ptr, perf);
@@ -48,8 +52,10 @@ py::array_t<double> solve(py::array_t<double> A, py::array_t<double> b, const st
     {
         if (place == "cpu")
             solve_cpu_SVD(nrow, ncol, A_ptr, b_ptr, result_ptr, perf);
+#ifdef USE_MAGMA
         else if (place == "gpu_simple")
             solve_gpu_simple_SVD(nrow, ncol, A_ptr, b_ptr, result_ptr, perf);
+#endif
         else
             throw std::invalid_argument(std::string("unknown execution place: ") + place + std::string(" for solution method: ") + method);
     }
@@ -80,6 +86,10 @@ py::array_t<double> solve_batch(py::array_t<double> A, py::array_t<double> b, co
     {
         if (place == "cpu")
             solve_batch_cpu_QR(nrow, ncol, nbatch, A_ptr, b_ptr, result_ptr, perf);
+#ifdef USE_CUDA
+        else if (place == "cuda")
+            solve_batch_cuda_QR(nrow, ncol, nbatch, A_ptr, b_ptr, result_ptr, perf);
+#endif
         else
             throw std::invalid_argument(std::string("unknown execution place: ") + place + std::string(" for solution method: ") + method);
     }
@@ -97,12 +107,16 @@ py::array_t<double> solve_batch(py::array_t<double> A, py::array_t<double> b, co
 
 void init()
 {
+#ifdef USE_MAGMA
     init_magma();
+#endif
 }
 
 void fini()
 {
+#ifdef USE_MAGMA
     fini_magma();
+#endif
 }
 
 // Define the module
