@@ -47,8 +47,7 @@ py::array_t<double> solve(py::array_t<double> A, py::array_t<double> b, const st
         else
             throw std::invalid_argument(std::string("unknown execution place: ") + place + std::string(" for solution method: ") + method);
     }
-
-    if (method == "svd")
+    else if (method == "svd")
     {
         if (place == "cpu")
             solve_cpu_SVD(nrow, ncol, A_ptr, b_ptr, result_ptr, perf);
@@ -63,14 +62,15 @@ py::array_t<double> solve(py::array_t<double> A, py::array_t<double> b, const st
         else
             throw std::invalid_argument(std::string("unknown execution place: ") + place + std::string(" for solution method: ") + method);
     }
-
-    if (method == "ls")
+    else if (method == "ls")
     {
         if (place == "cpu")
             solve_cpu_LS(nrow, ncol, A_ptr, b_ptr, result_ptr, perf);
         else
             throw std::invalid_argument(std::string("unknown execution place: ") + place + std::string(" for solution method: ") + method);
     }
+    else
+        throw std::invalid_argument(std::string("unknown solution method: ") + method);
 
     return result;
 }
