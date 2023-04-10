@@ -94,6 +94,137 @@ void solve_cuda_QR(int nrow, int ncol, double* A_ptr, double* b_ptr, double* res
     cudaFree(dwork);
 }
 
+
+void solve_cuda_SVD(int nrow, int ncol, double* A_ptr, double* b_ptr, double* result_ptr, PerfInfo& perf)
+{
+    RecordElapsed recordElapsed(perf);
+
+    cusolverDnHandle_t cusolverH = nullptr;
+    cublasHandle_t cublasH = nullptr;
+
+    cusolverDnCreate(&cusolverH);
+    cublasCreate(&cublasH);
+
+    int min_mn = nrow < ncol ? nrow : ncol;
+
+    cudaError_t err;
+    double* dA;
+    err = cudaMalloc((void **)&dA, sizeof(double) * nrow * ncol);
+    if (err != cudaSuccess)
+        throw std::runtime_error(std::string("failed to allocate dA: ") + cudaGetErrorName(err) + cudaGetErrorString(err));
+
+    double* db;
+    err = cudaMalloc((void **)&db, sizeof(double) * nrow);
+    if (err != cudaSuccess)
+        throw std::runtime_error("failed to allocate db");
+
+    int info;
+    int *dinfo;
+    err = cudaMalloc((void **)&dinfo, sizeof(int));
+    if (err != cudaSuccess)
+        throw std::runtime_error("failed to allocate dinfo");
+
+    double* S = new double[min_mn];
+
+    double* dS;
+    err = cudaMalloc((void **)&dS, sizeof(double) * min_mn);
+    if (err != cudaSuccess)
+        throw std::runtime_error("failed to allocate dS");
+
+    double* dU;
+    err = cudaMalloc((void **)&dU, sizeof(double) * nrow * nrow);
+    if (err != cudaSuccess)
+        throw std::runtime_error("failed to allocate dU");
+
+    double* dVT;
+    err = cudaMalloc((void **)&dVT, sizeof(double) * ncol * ncol);
+    if (err != cudaSuccess)
+        throw std::runtime_error("failed to allocate dVT");
+
+
+
+    err = cudaMemcpy(dA, A_ptr, sizeof(double)*nrow*ncol, cudaMemcpyHostToDevice);
+    if (err != cudaSuccess)
+        throw std::runtime_error("failed to copy dA");
+
+    err = cudaMemcpy(db, b_ptr, sizeof(double)*nrow, cudaMemcpyHostToDevice);
+    if (err != cudaSuccess)
+        throw std::runtime_error("failed to copy db");
+
+
+    int lwork_gesvd;
+    cusolverDnDgesvd_bufferSize(cusolverH, nrow, ncol, &lwork_gesvd);
+
+    int lwork = lwork_gesvd;
+
+    printf("lwork size = %d\n",lwork);
+    double *dwork;
+    err = cudaMalloc((void **)&dwork, sizeof(double) * lwork);
+    if (err != cudaSuccess)
+        throw std::runtime_error("failed to allocate dwork");
+
+    char jobu('A');
+    char jobvt('A');
+
+    cusolverStatus_t serr;
+    serr = cusolverDnDgesvd(cusolverH, jobu, jobvt, nrow, ncol, dA, nrow, dS, dU, nrow, dVT, ncol, dwork, lwork, nullptr, dinfo);
+    if (serr != CUSOLVER_STATUS_SUCCESS)
+        throw std::runtime_error("cusolverDnDgesvd failed"  + std::to_string(serr));
+
+    err = cudaMemcpy(S, dS, sizeof(double)*min_mn, cudaMemcpyDeviceToHost);
+    if (err != cudaSuccess)
+        throw std::runtime_error("failed to copy S_ptr");
+
+    for (int i = 0; i < ncol; i++) {
+        S[i] = 1.0/S[i];
+    }
+
+    double* tmp_ptr  = new double[nrow];
+    double* dtmp;
+    err = cudaMalloc((void **)&dtmp, sizeof(double) * nrow);
+    if (err != cudaSuccess)
+        throw std::runtime_error("failed to allocate dtmp");
+
+    // u.T * b
+    double one(1.0);
+    double zero(0.0);
+    int incx(1);
+    cublasDgemv(cublasH, CUBLAS_OP_T, nrow, nrow, &one, dU, nrow, db, incx, &zero, dtmp, incx);
+
+    err = cudaMemcpy(tmp_ptr, dtmp, sizeof(double)*ncol, cudaMemcpyDeviceToHost);
+    if (err != cudaSuccess)
+        throw std::runtime_error("failed to copy tmp_ptr to host");
+
+    // S^-1 * (u.T * b)
+    for (int i = 0; i < ncol; i++) {
+        tmp_ptr[i] *= S[i];
+    }
+
+    err = cudaMemcpy(dtmp, tmp_ptr, sizeof(double)*ncol, cudaMemcpyHostToDevice);
+    if (err != cudaSuccess)
+        throw std::runtime_error("failed to copy tmp_ptr to device");
+
+    // v.T * (S^-1 * (u.T * b))
+    cublasDgemv(cublasH, CUBLAS_OP_T, ncol, ncol, &one, dVT, ncol, dtmp, incx, &zero, db, incx);
+
+    cudaMemcpy(result_ptr, db, sizeof(double)*ncol, cudaMemcpyDeviceToHost);
+
+    cudaFree(dtmp);
+    cudaFree(dwork);
+    cudaFree(dVT);
+    cudaFree(dU);
+    cudaFree(dS);
+    cudaFree(db);
+    cudaFree(dA);
+
+    cusolverDnDestroy(cusolverH);
+    cublasDestroy(cublasH);
+
+    delete[] S;
+    delete[] tmp_ptr;
+}
+
+
 void solve_batch_cuda_QR(int nrow, int ncol, int nbatch, double* A_batch_ptr, double* b_batch_ptr, double* result_batch_ptr, PerfInfo& perf)
 {
     RecordElapsed recordElapsed(perf);
