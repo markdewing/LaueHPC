@@ -119,6 +119,37 @@ void solve_cpu_SVD(int nrow, int ncol, double* A_ptr, double* b_ptr, double* res
     delete[] U_ptr;
 }
 
+void solve_cpu_LS(int nrow, int ncol, double* A_ptr, double* b_ptr, double* result_ptr, PerfInfo& perf)
+{
+    RecordElapsed recordElapsed(perf);
+    int info;
+
+    char trans('N');
+    int nrhs(1);
+
+    double work_query;
+    int lwork = -1;
+
+    dgels_(&trans, &nrow, &ncol, &nrhs, A_ptr, &nrow, b_ptr, &nrow, &work_query, &lwork, &info);
+
+    if (info != 0)
+        printf("dgels work query, info  = %d\n",info);
+    lwork = int(work_query);
+    printf("optimal lwork = %d\n",lwork);
+
+    double* work = new double[lwork];
+
+
+    dgels_(&trans, &nrow, &ncol, &nrhs, A_ptr, &nrow, b_ptr, &nrow, work, &lwork, &info);
+    if (info != 0)
+        printf("dgels info = %d\n",info);
+
+    for (int i = 0; i < ncol; i++)
+        result_ptr[i] = b_ptr[i];
+
+    delete[] work;
+}
+
 void solve_batch_cpu_QR(int nrow, int ncol, int nbatch, double* A_batch_ptr, double* b_batch_ptr, double* result_batch_ptr, PerfInfo& perf)
 {
     RecordElapsed recordElapsed(perf);

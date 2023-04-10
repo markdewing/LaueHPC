@@ -54,6 +54,14 @@ py::array_t<double> solve(py::array_t<double> A, py::array_t<double> b, const st
             throw std::invalid_argument(std::string("unknown execution place: ") + place + std::string(" for solution method: ") + method);
     }
 
+    if (method == "ls")
+    {
+        if (place == "cpu")
+            solve_cpu_LS(nrow, ncol, A_ptr, b_ptr, result_ptr, perf);
+        else
+            throw std::invalid_argument(std::string("unknown execution place: ") + place + std::string(" for solution method: ") + method);
+    }
+
     return result;
 }
 
