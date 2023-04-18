@@ -80,7 +80,7 @@ void solve_cuda_QR(int nrow, int ncol, T* A_ptr, T* b_ptr, T* result_ptr, PerfIn
         serr = cusolverDnSgeqrf(cusolverH, nrow, ncol, dA, nrow, dtau, dwork, lwork, dinfo);
 
     if (serr != CUSOLVER_STATUS_SUCCESS)
-        throw std::runtime_error("cusolverDnDgeqrf failed");
+        throw std::runtime_error("cusolverDnXgeqrf failed");
     cudaMemcpy(&info, dinfo, sizeof(int), cudaMemcpyDeviceToHost);
     if (info != 0)
      std::runtime_error(std::string("dgeqrf info = ") + std::to_string(info));
@@ -88,7 +88,7 @@ void solve_cuda_QR(int nrow, int ncol, T* A_ptr, T* b_ptr, T* result_ptr, PerfIn
     if constexpr(std::is_same<T,double>())
         serr = cusolverDnDormqr(cusolverH, CUBLAS_SIDE_LEFT, CUBLAS_OP_T, nrow, 1, ncol, dA, nrow, dtau, db, nrow, dwork, lwork, dinfo);
     if (serr != CUSOLVER_STATUS_SUCCESS)
-        throw std::runtime_error("cusolverDnDgeqrf failed");
+        throw std::runtime_error("cusolverDnXgeqrf failed");
     cudaMemcpy(&info, dinfo, sizeof(int), cudaMemcpyDeviceToHost);
     if (info != 0)
         std::runtime_error(std::string("dormqr info = ") + std::to_string(info));
@@ -195,7 +195,7 @@ void solve_cuda_SVD(int nrow, int ncol, T* A_ptr, T* b_ptr, T* result_ptr, PerfI
         serr = cusolverDnSgesvd(cusolverH, jobu, jobvt, nrow, ncol, dA, nrow, dS, dU, nrow, dVT, ncol, dwork, lwork, nullptr, dinfo);
 
     if (serr != CUSOLVER_STATUS_SUCCESS)
-        throw std::runtime_error("cusolverDnDgesvd failed"  + std::to_string(serr));
+        throw std::runtime_error("cusolverDnXgesvd failed"  + std::to_string(serr));
 
     err = cudaMemcpy(S, dS, sizeof(T)*min_mn, cudaMemcpyDeviceToHost);
     if (err != cudaSuccess)
@@ -357,7 +357,7 @@ void solve_batch_cuda_QR(int nrow, int ncol, int nbatch, T* A_batch_ptr, T* b_ba
             serr = cusolverDnSgeqrf(cusolverH[ib], nrow, ncol, dA, nrow, dtau, dwork + lwork*ib, lwork, dinfo);
 
         if (serr != CUSOLVER_STATUS_SUCCESS)
-            throw std::runtime_error("cusolverDnDgeqrf failed");
+            throw std::runtime_error("cusolverDnXgeqrf failed");
         //cudaMemcpyAsync(&info, dinfo, sizeof(int), cudaMemcpyDeviceToHost, streams[ib]);
         //if (info != 0)
         // std::runtime_error(std::string("dgeqrf info = ") + std::to_string(info));
@@ -367,7 +367,7 @@ void solve_batch_cuda_QR(int nrow, int ncol, int nbatch, T* A_batch_ptr, T* b_ba
         if constexpr(std::is_same<T,float>())
             serr = cusolverDnSormqr(cusolverH[ib], CUBLAS_SIDE_LEFT, CUBLAS_OP_T, nrow, 1, ncol, dA, nrow, dtau, db, nrow, dwork + lwork*ib, lwork, dinfo);
         if (serr != CUSOLVER_STATUS_SUCCESS)
-            throw std::runtime_error("cusolverDnDgeqrf failed");
+            throw std::runtime_error("cusolverDnXgeqrf failed");
         //cudaMemcpyAsync(&info, dinfo, sizeof(int), cudaMemcpyDeviceToHost, streams[ib]);
         //if (info != 0)
         //    std::runtime_error(std::string("dormqr info = ") + std::to_string(info));
@@ -468,7 +468,7 @@ void solve_batch_cuda_LS(int nrow, int ncol, int nbatch, T* A_batch_ptr, T* b_ba
         cublasSgelsBatched(cublasH, CUBLAS_OP_N, nrow, ncol, nrhs, dA_ptrs, nrow, db_ptrs, nrow, &info, dinfos, nbatch);
 
     if (info != 0)
-        throw std::runtime_error("cublasDgelsBatched info not zero : " + std::to_string(info));
+        throw std::runtime_error("cublasXgelsBatched info not zero : " + std::to_string(info));
     for (int ib = 0; ib < nbatch; ib++)
     {
         cudaMemcpy(result_batch_ptr + ib*ncol, db_batch, sizeof(T)*ncol, cudaMemcpyDeviceToHost);
