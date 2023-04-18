@@ -2,6 +2,7 @@
 import numpy as np
 from scipy import optimize
 from scipy import linalg
+import time
 
 # Different solution methods for Ax=b for an overdetermined system
 
@@ -19,8 +20,11 @@ print('b',b.shape)
 use_nnls = True
 if use_nnls:
     print("\nsolve using NNLS")
+    start = time.perf_counter()
     out = optimize.nnls(A, b)
+    end = time.perf_counter()
 
+    print('solution time = ',end-start)
     print('solution shape = ',out[0].shape)
     residual = np.sum((np.dot(A, out[0]) - b)**2)
     print('NNLS residual = ',residual)
@@ -60,6 +64,7 @@ if use_LU:
 use_QR = True
 if use_QR:
     print("\nsolve using QR")
+    start = time.perf_counter()
     qr,tau,work,info = linalg.lapack.dgeqrf(A)
     lwork = 1
     cq,work,info = linalg.lapack.dormqr("L","T",qr,tau,b,lwork)
@@ -75,6 +80,8 @@ if use_QR:
     #for xt in x:
     #    print(xt)
     #print(x)
+    end = time.perf_counter()
+    print("QR solution time= ",end-start)
 
     diff = np.sum((x - out[0])**2)
     print('QR diff = ',diff)
