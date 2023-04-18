@@ -40,7 +40,7 @@ if test_single:
     if use_float:
         x = solver.solve_float(Af, bf, place="cuda", method="qr", perf=perf)
     else:
-        x = solver.solve_float(A, b, place="cuda", method="qr", perf=perf)
+        x = solver.solve(A, b, place="cuda", method="qr", perf=perf)
     print("warmup elapsed time (s) = ",perf.elapsed)
 
     start = time.perf_counter()
@@ -72,7 +72,7 @@ if test_batch:
         A_copy = A_copy.astype(np.float32)
         b_copy = b_copy.astype(np.float32)
     print("---- Running batch ----")
-    nbatch = 1000
+    nbatch = 40
 
     A_shape = list(A.shape)
     A_shape.append(nbatch)
@@ -90,6 +90,8 @@ if test_batch:
 
     place = 'cuda'
     method = 'ls'
+    #place = 'cpu'
+    #method = 'qr'
     if use_float:
         xb = solver.solve_batch_float(A_batch, b_batch, place=place, method=method, perf=perf)
     else:
