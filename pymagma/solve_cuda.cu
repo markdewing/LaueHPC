@@ -96,6 +96,8 @@ void solve_cuda_QR(int nrow, int ncol, T* A_ptr, T* b_ptr, T* result_ptr, PerfIn
     T one(1.0);
     if constexpr(std::is_same<T,double>())
         cublasDtrsm(cublasH, CUBLAS_SIDE_LEFT, CUBLAS_FILL_MODE_UPPER, CUBLAS_OP_N, CUBLAS_DIAG_NON_UNIT, ncol, 1, &one, dA, nrow, db, nrow);
+    if constexpr(std::is_same<T,float>())
+        cublasStrsm(cublasH, CUBLAS_SIDE_LEFT, CUBLAS_FILL_MODE_UPPER, CUBLAS_OP_N, CUBLAS_DIAG_NON_UNIT, ncol, 1, &one, dA, nrow, db, nrow);
 
     cudaMemcpy(result_ptr, db, sizeof(T)*ncol, cudaMemcpyDeviceToHost);
 
