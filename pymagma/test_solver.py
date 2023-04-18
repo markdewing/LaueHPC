@@ -1,6 +1,7 @@
 
 import numpy as np
 import solver
+import time
 
 
 solver.init()
@@ -27,11 +28,20 @@ perf = solver.PerfInfo()
 
 test_single = True
 if test_single:
+    print("---- Running single ----")
     # Default method is qr
     #x = solver.solve(A, b, place="gpu_simple", perf=perf)
-    x = solver.solve(A, b, place="cpu", method="svd", perf=perf)
+    #x = solver.solve(A, b, place="cuda", method="svd", perf=perf)
+    #print("warmup elapsed time (s) = ",perf.elapsed)
 
+    A = np.copy(A_copy)
+    b = np.copy(b_copy)
+    start = time.perf_counter()
+    #x = solver.solve(A, b, place="cpu", method="ls", perf=perf)
+    x = solver.solve(A, b, "cpu", "ls",perf)
+    end = time.perf_counter()
     print("elapsed time (s) = ",perf.elapsed)
+    print("python elapsed time (s) = ",end-start)
     #print('x shape = ',x.shape)
     #print('x = ',x[0:5])
 
@@ -44,6 +54,7 @@ if test_single:
 
 test_batch = True
 if test_batch:
+    print("---- Running batch ----")
     nbatch = 10
 
     A_shape = list(A.shape)
@@ -60,7 +71,15 @@ if test_batch:
         A_batch[:,:,ib] = A_copy[:,:]
         b_batch[:,ib] = b_copy[:]
 
-    xb = solver.solve_batch(A_batch, b_batch, place="cpu", method="svd", perf=perf)
+    xb = solver.solve_batch(A_batch, b_batch, place="cuda", method="ls", perf=perf)
+    print("warmup elapsed time (s) = ",perf.elapsed, " per batch",perf.elapsed/nbatch)
+
+    for ib in range(nbatch):
+        A_batch[:,:,ib] = A_copy[:,:]
+        b_batch[:,ib] = b_copy[:]
+
+    xb = solver.solve_batch(A_batch, b_batch, place="cuda", method="ls", perf=perf)
+    print("elapsed time (s) = ",perf.elapsed, " per batch",perf.elapsed/nbatch)
 
     diff = 0.0
     for ib in range(nbatch):
