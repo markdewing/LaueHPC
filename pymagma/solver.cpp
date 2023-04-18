@@ -105,14 +105,24 @@ py::array_t<double> solve_batch(py::array_t<double> A, py::array_t<double> b, co
         else
             throw std::invalid_argument(std::string("unknown execution place: ") + place + std::string(" for solution method: ") + method);
     }
-
-    if (method == "svd")
+    else if (method == "svd")
     {
         if (place == "cpu")
             solve_batch_cpu_SVD(nrow, ncol, nbatch, A_ptr, b_ptr, result_ptr, perf);
         else
             throw std::invalid_argument(std::string("unknown execution place: ") + place + std::string(" for solution method: ") + method);
     }
+    else if (method == "ls")
+    {
+#ifdef USE_CUDA
+        if (place == "cuda")
+            solve_batch_cuda_LS(nrow, ncol, nbatch, A_ptr, b_ptr, result_ptr, perf);
+#endif
+        else
+            throw std::invalid_argument(std::string("unknown execution place: ") + place + std::string(" for solution method: ") + method);
+    }
+    else
+        throw std::invalid_argument(std::string("unknown solution method: ") + method);
 
     return result;
 }

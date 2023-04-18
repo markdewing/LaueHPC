@@ -345,3 +345,74 @@ void solve_batch_cuda_QR(int nrow, int ncol, int nbatch, double* A_batch_ptr, do
     cudaFree(dinfo);
     cudaFree(dwork);
 }
+
+void solve_batch_cuda_LS(int nrow, int ncol, int nbatch, double* A_batch_ptr, double* b_batch_ptr, double* result_batch_ptr, PerfInfo& perf)
+{
+    RecordElapsed recordElapsed(perf);
+
+    cublasHandle_t cublasH = nullptr;
+    cublasCreate(&cublasH);
+
+    cudaError_t err;
+    double* dA_batch;
+    err = cudaMalloc((void **)&dA_batch, sizeof(double) * nrow * ncol * nbatch);
+    if (err != cudaSuccess)
+        throw std::runtime_error(std::string("failed to allocate dA: ") + cudaGetErrorName(err) + cudaGetErrorString(err));
+
+    double** dA_ptrs;
+    err = cudaMalloc((void ***)&dA_ptrs, sizeof(double*) * nbatch);
+    if (err != cudaSuccess)
+        throw std::runtime_error(std::string("failed to allocate dA_ptrs: ") + cudaGetErrorName(err) + cudaGetErrorString(err));
+
+    double** A_ptrs = new double*[nbatch];
+    for (int i = 0; i < nbatch; i++) {
+        A_ptrs[i] = dA_batch + i*nrow*ncol;
+    }
+
+    err = cudaMemcpy(dA_ptrs, A_ptrs, sizeof(double*)*nbatch, cudaMemcpyHostToDevice);
+    if (err != cudaSuccess)
+        throw std::runtime_error("failed to copy dA");
+
+    double* db_batch;
+    err = cudaMalloc((void **)&db_batch, sizeof(double) * nrow * nbatch);
+    if (err != cudaSuccess)
+        throw std::runtime_error("failed to allocate db");
+
+    double** db_ptrs;
+    err = cudaMalloc((void ***)&db_ptrs, sizeof(double*) * nbatch);
+    if (err != cudaSuccess)
+        throw std::runtime_error(std::string("failed to allocate db_ptrs: ") + cudaGetErrorName(err) + cudaGetErrorString(err));
+
+    double** b_ptrs = new double*[nbatch];
+    for (int i = 0; i < nbatch; i++) {
+        b_ptrs[i] = db_batch + i*nrow;
+    }
+
+    err = cudaMemcpy(db_ptrs, b_ptrs, sizeof(double*)*nbatch, cudaMemcpyHostToDevice);
+    if (err != cudaSuccess)
+        throw std::runtime_error("failed to copy b_ptrs");
+
+    err = cudaMemcpy(dA_batch, A_batch_ptr, sizeof(double)*nrow*ncol*nbatch, cudaMemcpyHostToDevice);
+    if (err != cudaSuccess)
+        throw std::runtime_error("failed to copy dA");
+
+    err = cudaMemcpy(db_batch, b_batch_ptr, sizeof(double)*nrow*nbatch, cudaMemcpyHostToDevice);
+    if (err != cudaSuccess)
+        throw std::runtime_error("failed to copy db");
+
+    int* dinfos;
+    err = cudaMalloc((void **)&dinfos, sizeof(int) * nbatch);
+    if (err != cudaSuccess)
+        throw std::runtime_error(std::string("failed to allocate dinfos: ") + cudaGetErrorName(err) + cudaGetErrorString(err));
+
+    int info;
+    int nrhs = 1;
+    cublasDgelsBatched(cublasH, CUBLAS_OP_N, nrow, ncol, nrhs, dA_ptrs, nrow, db_ptrs, nrow, &info, dinfos, nbatch);
+    if (info != 0)
+        throw std::runtime_error("cublasDgelsBatched info not zero : " + std::to_string(info));
+    for (int ib = 0; ib < nbatch; ib++)
+    {
+        cudaMemcpy(result_batch_ptr + ib*ncol, db_batch, sizeof(double)*ncol, cudaMemcpyDeviceToHost);
+    }
+
+}
