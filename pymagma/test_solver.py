@@ -26,19 +26,31 @@ soln = np.loadtxt(x_txt)
 
 perf = solver.PerfInfo()
 
+# Use 32-bit FP precision or 64-bit FP precision
+use_float = True
+
 test_single = True
 if test_single:
     print("---- Running single ----")
-    # Default method is qr
-    #x = solver.solve(A, b, place="gpu_simple", perf=perf)
-    #x = solver.solve(A, b, place="cuda", method="svd", perf=perf)
-    #print("warmup elapsed time (s) = ",perf.elapsed)
-
     A = np.copy(A_copy)
     b = np.copy(b_copy)
+    Af = A.astype(np.float32)
+    bf = b.astype(np.float32)
+    # Default method is qr
+    if use_float:
+        x = solver.solve_float(Af, bf, place="cuda", method="qr", perf=perf)
+    else:
+        x = solver.solve_float(A, b, place="cuda", method="qr", perf=perf)
+    print("warmup elapsed time (s) = ",perf.elapsed)
+
     start = time.perf_counter()
     #x = solver.solve(A, b, place="cpu", method="ls", perf=perf)
-    x = solver.solve(A, b, "cpu", "ls",perf)
+    #x = solver.solve(A, b, "cpu", "ls",perf)
+    if use_float:
+        x = solver.solve_float(Af, bf, "cpu", "ls",perf)
+    else:
+        x = solver.solve(A, b, "cpu", "ls",perf)
+
     end = time.perf_counter()
     print("elapsed time (s) = ",perf.elapsed)
     print("python elapsed time (s) = ",end-start)
@@ -54,8 +66,13 @@ if test_single:
 
 test_batch = True
 if test_batch:
+    if use_float:
+        A = A.astype(np.float32)
+        b = b.astype(np.float32)
+        A_copy = A_copy.astype(np.float32)
+        b_copy = b_copy.astype(np.float32)
     print("---- Running batch ----")
-    nbatch = 10
+    nbatch = 1000
 
     A_shape = list(A.shape)
     A_shape.append(nbatch)
@@ -71,14 +88,22 @@ if test_batch:
         A_batch[:,:,ib] = A_copy[:,:]
         b_batch[:,ib] = b_copy[:]
 
-    xb = solver.solve_batch(A_batch, b_batch, place="cuda", method="ls", perf=perf)
+    place = 'cuda'
+    method = 'ls'
+    if use_float:
+        xb = solver.solve_batch_float(A_batch, b_batch, place=place, method=method, perf=perf)
+    else:
+        xb = solver.solve_batch(A_batch, b_batch, place=place, method=method, perf=perf)
     print("warmup elapsed time (s) = ",perf.elapsed, " per batch",perf.elapsed/nbatch)
 
     for ib in range(nbatch):
         A_batch[:,:,ib] = A_copy[:,:]
         b_batch[:,ib] = b_copy[:]
 
-    xb = solver.solve_batch(A_batch, b_batch, place="cuda", method="ls", perf=perf)
+    if use_float:
+        xb = solver.solve_batch_float(A_batch, b_batch, place=place, method=method, perf=perf)
+    else:
+        xb = solver.solve_batch(A_batch, b_batch, place=place, method=method, perf=perf)
     print("elapsed time (s) = ",perf.elapsed, " per batch",perf.elapsed/nbatch)
 
     diff = 0.0
