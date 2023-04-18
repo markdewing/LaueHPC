@@ -167,25 +167,28 @@ template<typename T>
 void solve_batch_cpu_QR(int nrow, int ncol, int nbatch, T* A_batch_ptr, T* b_batch_ptr, T* result_batch_ptr, PerfInfo& perf)
 {
     RecordElapsed recordElapsed(perf);
-    T* tau = new T[ncol];
     int info;
+
+    T* tau1 = new T[ncol];
 
     T work_query;
     int lwork = -1;
     if constexpr(std::is_same<T,double>())
-        dgeqrf_(&nrow, &ncol, A_batch_ptr, &nrow, tau, &work_query, &lwork, &info);
+        dgeqrf_(&nrow, &ncol, A_batch_ptr, &nrow, tau1, &work_query, &lwork, &info);
     if constexpr(std::is_same<T,float>())
-        sgeqrf_(&nrow, &ncol, A_batch_ptr, &nrow, tau, &work_query, &lwork, &info);
+        sgeqrf_(&nrow, &ncol, A_batch_ptr, &nrow, tau1, &work_query, &lwork, &info);
     if (info != 0)
         printf("dgeqrf work query, info  = %d\n",info);
     lwork = int(work_query);
     printf("optimal lwork = %d\n",lwork);
 
-    T* work = new T[lwork];
 
     // Assume the work size is the same for each batch item
 
+    #pragma omp parallel for
     for (int ib = 0; ib < nbatch; ib++) {
+        T* tau = new T[ncol];
+        T* work = new T[lwork];
         T *A_ptr = A_batch_ptr + ib*nrow*ncol;
         T *b_ptr = b_batch_ptr + ib*nrow;
         T *result_ptr = result_batch_ptr + ib*ncol;
@@ -227,10 +230,12 @@ void solve_batch_cpu_QR(int nrow, int ncol, int nbatch, T* A_batch_ptr, T* b_bat
 
         for (int i = 0; i < ncol; i++)
             result_ptr[i] = b_ptr[i];
+        delete[] tau;
+        delete[] work;
     }
 
-    delete[] tau;
-    delete[] work;
+    //delete[] tau;
+    //delete[] work;
 }
 template void solve_batch_cpu_QR<double>(int nrow, int ncol, int nbatch, double* A_batch_ptr, double* b_batch_ptr, double* result_batch_ptr, PerfInfo& perf);
 template void solve_batch_cpu_QR<float>(int nrow, int ncol, int nbatch, float* A_batch_ptr, float* b_batch_ptr, float* result_batch_ptr, PerfInfo& perf);
