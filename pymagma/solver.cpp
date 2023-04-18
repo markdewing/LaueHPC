@@ -13,6 +13,7 @@
 
 namespace py = pybind11;
 
+
 // Solves Ax=b
 // Input A,b, return x
 py::array_t<double> solve(py::array_t<double> A, py::array_t<double> b, const std::string& place, const std::string& method, PerfInfo &perf) {
@@ -57,7 +58,7 @@ py::array_t<double> solve(py::array_t<double> A, py::array_t<double> b, const st
 #endif
 #ifdef USE_CUDA
         else if (place == "cuda")
-            solve_cuda_SVD(nrow, ncol, A_ptr, b_ptr, result_ptr, perf);
+            solve_cuda_SVD<double>(nrow, ncol, A_ptr, b_ptr, result_ptr, perf);
 #endif
         else
             throw std::invalid_argument(std::string("unknown execution place: ") + place + std::string(" for solution method: ") + method);
@@ -75,32 +76,71 @@ py::array_t<double> solve(py::array_t<double> A, py::array_t<double> b, const st
     return result;
 }
 
+template<typename T>
+py::array_t<T> solve_template(py::array_t<T> A, py::array_t<T> b, const std::string& place, const std::string& method, PerfInfo &perf) {
+
+    // Get a pointer to the data in the input array
+    auto A_ptr = static_cast<T *>(A.request().ptr);
+    auto A_shape = A.shape();
+    int nrow = A_shape[0];
+    int ncol = A_shape[1];
+    //printf("nrow = %d ncol = %d\n",nrow,ncol);
+
+    auto b_ptr = static_cast<T *>(b.request().ptr);
+    auto b_shape = b.shape();
+
+    auto result = py::array_t<T>(ncol);
+    auto result_ptr = static_cast<T *>(result.request().ptr);
+
+    if (method == "qr")
+    {
+#ifdef USE_CUDA
+        if (place == "cuda")
+            solve_cuda_QR<T>(nrow, ncol, A_ptr, b_ptr, result_ptr, perf);
+#endif
+        else
+            throw std::invalid_argument(std::string("unknown execution place: ") + place + std::string(" for solution method: ") + method);
+    }
+    else if (method == "ls")
+    {
+        if (place == "cpu")
+            solve_cpu_LS<T>(nrow, ncol, A_ptr, b_ptr, result_ptr, perf);
+        else
+            throw std::invalid_argument(std::string("unknown execution place: ") + place + std::string(" for solution method: ") + method);
+    }
+    else
+        throw std::invalid_argument(std::string("unknown solution method: ") + method);
+
+    return result;
+}
+
 // Solves Ax=b for a number of systems at the same time
 // Input A,b, return x
 // Batch is last dimension for A,b, and x
-py::array_t<double> solve_batch(py::array_t<double> A, py::array_t<double> b, const std::string& place, const std::string& method, PerfInfo &perf) {
+template<typename T>
+py::array_t<T> solve_batch(py::array_t<T> A, py::array_t<T> b, const std::string& place, const std::string& method, PerfInfo &perf) {
 
     // Get a pointer to the data in the input array
-    auto A_ptr = static_cast<double *>(A.request().ptr);
+    auto A_ptr = static_cast<T *>(A.request().ptr);
     auto A_shape = A.shape();
     int nrow = A_shape[0];
     int ncol = A_shape[1];
     int nbatch = A_shape[2];
     //printf("nrow = %d ncol = %d nbatch = %d\n",nrow,ncol,nbatch);
 
-    auto b_ptr = static_cast<double *>(b.request().ptr);
+    auto b_ptr = static_cast<T *>(b.request().ptr);
     auto b_shape = b.shape();
 
-    auto result = py::array_t<double, py::array::f_style>( {ncol,nbatch} );
-    auto result_ptr = static_cast<double *>(result.request().ptr);
+    auto result = py::array_t<T, py::array::f_style>( {ncol,nbatch} );
+    auto result_ptr = static_cast<T *>(result.request().ptr);
 
     if (method == "qr")
     {
         if (place == "cpu")
-            solve_batch_cpu_QR(nrow, ncol, nbatch, A_ptr, b_ptr, result_ptr, perf);
+            solve_batch_cpu_QR<T>(nrow, ncol, nbatch, A_ptr, b_ptr, result_ptr, perf);
 #ifdef USE_CUDA
         else if (place == "cuda")
-            solve_batch_cuda_QR(nrow, ncol, nbatch, A_ptr, b_ptr, result_ptr, perf);
+            solve_batch_cuda_QR<T>(nrow, ncol, nbatch, A_ptr, b_ptr, result_ptr, perf);
 #endif
         else
             throw std::invalid_argument(std::string("unknown execution place: ") + place + std::string(" for solution method: ") + method);
@@ -108,7 +148,7 @@ py::array_t<double> solve_batch(py::array_t<double> A, py::array_t<double> b, co
     else if (method == "svd")
     {
         if (place == "cpu")
-            solve_batch_cpu_SVD(nrow, ncol, nbatch, A_ptr, b_ptr, result_ptr, perf);
+            solve_batch_cpu_SVD<T>(nrow, ncol, nbatch, A_ptr, b_ptr, result_ptr, perf);
         else
             throw std::invalid_argument(std::string("unknown execution place: ") + place + std::string(" for solution method: ") + method);
     }
@@ -116,7 +156,7 @@ py::array_t<double> solve_batch(py::array_t<double> A, py::array_t<double> b, co
     {
 #ifdef USE_CUDA
         if (place == "cuda")
-            solve_batch_cuda_LS(nrow, ncol, nbatch, A_ptr, b_ptr, result_ptr, perf);
+            solve_batch_cuda_LS<T>(nrow, ncol, nbatch, A_ptr, b_ptr, result_ptr, perf);
 #endif
         else
             throw std::invalid_argument(std::string("unknown execution place: ") + place + std::string(" for solution method: ") + method);
@@ -148,10 +188,16 @@ PYBIND11_MODULE(solver, m) {
         .def(py::init<>())
         .def_readwrite("elapsed", &PerfInfo::elapsed)
         .def("get_comp", &PerfInfo::get_comp);
-    m.def("solve", &solve, "Solve Ax=b for x",py::arg("A"),py::arg("b"),
+    m.def("solve", &solve_template<double>, "Solve Ax=b for x",py::arg("A"),py::arg("b"),
                  py::arg("place")="cpu", py::arg("method")="qr", py::arg("perf") = PerfInfo()
                      );
-    m.def("solve_batch", &solve_batch, "Solve Ax=b for x",py::arg("A"),py::arg("b"),
+    m.def("solve_float", &solve_template<float>, "Solve Ax=b for x",py::arg("A"),py::arg("b"),
+                 py::arg("place")="cpu", py::arg("method")="qr", py::arg("perf") = PerfInfo()
+                     );
+    m.def("solve_batch", &solve_batch<double>, "Solve Ax=b for x",py::arg("A"),py::arg("b"),
+                 py::arg("place")="cpu", py::arg("method")="qr", py::arg("perf") = PerfInfo()
+                     );
+    m.def("solve_batch_float", &solve_batch<float>, "Solve Ax=b for x",py::arg("A"),py::arg("b"),
                  py::arg("place")="cpu", py::arg("method")="qr", py::arg("perf") = PerfInfo()
                      );
     m.def("init", &init, "Initialize magma");
