@@ -87,6 +87,8 @@ void solve_cuda_QR(int nrow, int ncol, T* A_ptr, T* b_ptr, T* result_ptr, PerfIn
 
     if constexpr(std::is_same<T,double>())
         serr = cusolverDnDormqr(cusolverH, CUBLAS_SIDE_LEFT, CUBLAS_OP_T, nrow, 1, ncol, dA, nrow, dtau, db, nrow, dwork, lwork, dinfo);
+    if constexpr(std::is_same<T,float>())
+        serr = cusolverDnSormqr(cusolverH, CUBLAS_SIDE_LEFT, CUBLAS_OP_T, nrow, 1, ncol, dA, nrow, dtau, db, nrow, dwork, lwork, dinfo);
     if (serr != CUSOLVER_STATUS_SUCCESS)
         throw std::runtime_error("cusolverDnXgeqrf failed");
     cudaMemcpy(&info, dinfo, sizeof(int), cudaMemcpyDeviceToHost);
